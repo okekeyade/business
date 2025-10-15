@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 import pytesseract
-from PIL import Image
-import base64, io, re, os, json
-import shutil
+from PIL import Image, ImageFilter
+import base64, io, re, os, json, shutil
 
 app = Flask(__name__)
 DATA_FILE = 'data.json'
@@ -34,13 +33,38 @@ def list_page():
 def data_api():
     return jsonify(load_data())
 
+def preprocess_image(img):
+    # 1. グレースケール化
+    img = img.convert('L')
+
+    # 2. ノイズ除去
+    img = img.filter(ImageFilter.MedianFilter())
+
+    # 3. サイズ調整（横幅1000px）
+    basewidth = 1000
+    wpercent = (basewidth / float(img.size[0]))
+    hsize = int((float(img.size[1]) * float(wpercent)))
+    img = img.resize((basewidth, hsize), Image.ANTIALIAS)
+
+    # 4. 二値化
+    threshold = 150
+    img = img.point(lambda x: 0 if x < threshold else 255)
+
+    return img
+
 @app.route('/ocr', methods=['POST'])
 def ocr():
     data = request.json['image']
     img_data = re.sub('^data:image/.+;base64,', '', data)
     img = Image.open(io.BytesIO(base64.b64decode(img_data)))
-    text = pytesseract.image_to_string(img, lang='jpn+eng')
 
+    # 前処理
+    img = preprocess_image(img)
+
+    # OCR 実行（PSM 6 + OEM 1）
+    text = pytesseract.image_to_string(img, lang='jpn+eng', config='--psm 6 --oem 1')
+
+    # 文字列解析
     lines = text.splitlines()
     item, amount = "", ""
     for ln in lines:
@@ -49,6 +73,7 @@ def ocr():
             if m:
                 item, amount = m.group(1).strip(), m.group(2)
                 break
+
     return jsonify({"item": item, "amount": amount})
 
 @app.route('/save', methods=['POST'])
