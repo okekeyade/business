@@ -1,1 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>収支一覧</title>
+<style>
+  body { background-color: #d6610d; color: white; font-family: sans-serif; }
+  table { border-collapse: collapse; width: 80%; margin: auto; }
+  th, td { border: 1px solid white; padding: 8px; text-align: left; }
+  th { background-color: white; color: #d6610d; }
+</style>
+</head>
+<body>
+<h1 style="text-align:center;">収支一覧</h1>
+<div id="tables"></div>
+<button onclick="location.href='/'">ホームに戻る</button>
 
+<script>
+async function loadData() {
+  const res = await fetch('/data');
+  const data = await res.json();
+  const container = document.getElementById('tables');
+  container.innerHTML = '';
+
+  for (const key of ['収入','支出']) {
+    let html = `<h2>${key}</h2><table><tr><th>項目</th><th>金額</th></tr>`;
+    data[key].forEach(d => {
+      html += `<tr><td>${d.item}</td><td>${d.amount}</td></tr>`;
+    });
+    html += '</table>';
+    container.innerHTML += html;
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
