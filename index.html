@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>てがきぼ -TEGaKiBO- </title>
+  <title>てがきぼ -TEGaKiBO-</title>
   <style>
     :root {
       --main-color: #d6610d;
@@ -14,13 +14,24 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start; /* 上詰めではなく少し余裕を持たせる */
-      min-height: 100dvh; /* モバイル対応: 100vhではなく100dvhを使用 */
+      justify-content: flex-start;
+      min-height: 100dvh;
       margin: 0;
-      padding: 4vh 0; /* 上下に余白 */
+      padding: 4vh 0;
       color: white;
       font-family: "Segoe UI", sans-serif;
       box-sizing: border-box;
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      margin: 0 auto 2vh auto;
+      display: block;
+      border-radius: 50%;
+      background-color: white;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
     }
 
     h1 {
@@ -58,7 +69,6 @@
       display: none;
     }
 
-    /* ボタンを固定的に配置して指で押しやすくする */
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -74,11 +84,18 @@
   </style>
 </head>
 <body>
-  <h1>📷 てがきぼ -TEGaKiBO- </h1>
+  <!-- 🔸 ロゴ -->
+  <img src="{{ url_for('static', filename='logo_circle.png') }}" alt="ロゴ" class="logo" />
+
+  <!-- 🔸 タイトル -->
+  <h1>📷 てがきぼ -TEGaKiBO-</h1>
+
+  <!-- 🔸 カメラ映像・プレビュー -->
   <video id="camera" autoplay playsinline></video>
   <canvas id="canvas" style="display:none;"></canvas>
   <img id="preview" alt="プレビュー画像" />
-  
+
+  <!-- 🔸 ボタン群 -->
   <div class="controls">
     <button id="capture">撮影</button>
     <button id="retake">撮り直す</button>
@@ -112,7 +129,7 @@
 
     startCamera();
 
-    // 撮影ボタン
+    // 撮影
     captureBtn.addEventListener("click", () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
