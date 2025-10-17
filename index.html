@@ -84,18 +84,18 @@
   </style>
 </head>
 <body>
-  <!-- 🔸 ロゴ -->
+  <!-- ロゴ -->
   <img src="{{ url_for('static', filename='logo.png') }}" alt="ロゴ" class="logo" />
 
-  <!-- 🔸 タイトル -->
+  <!--　タイトル -->
   <h1>📷 てがきぼ -TEGaKiBO-</h1>
 
-  <!-- 🔸 カメラ映像・プレビュー -->
+  <!--　カメラ映像・プレビュー -->
   <video id="camera" autoplay playsinline></video>
   <canvas id="canvas" style="display:none;"></canvas>
   <img id="preview" alt="プレビュー画像" />
 
-  <!-- 🔸 ボタン群 -->
+  <!-- ボタン群 -->
   <div class="controls">
     <button id="capture">撮影</button>
     <button id="retake">撮り直す</button>
@@ -129,7 +129,7 @@
 
     startCamera();
 
-    // 撮影
+    //撮影
     captureBtn.addEventListener("click", () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -143,7 +143,7 @@
       sendBtn.style.display = "inline-block";
     });
 
-    // 撮り直し
+    //撮り直し
     retakeBtn.addEventListener("click", () => {
       preview.style.display = "none";
       video.style.display = "block";
@@ -152,7 +152,7 @@
       sendBtn.style.display = "none";
     });
 
-    // 送信
+    //送信
     sendBtn.addEventListener("click", () => {
       canvas.toBlob((blob) => {
         const formData = new FormData();
@@ -175,4 +175,5 @@
   </script>
 </body>
 </html>
+
 
