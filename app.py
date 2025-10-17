@@ -84,6 +84,12 @@ def save():
     save_data(all_data)
     return jsonify({"status":"ok"})
 
+@app.route('/upload', methods=['POST'])
+def upload():
+    # /ocr と同じ処理を再利用
+    return ocr()
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
