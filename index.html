@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>てがきぼ -TEGaKiBO-</title>
+
+  <!-- favicon -->
+  <link rel="icon" type="image/png" href="static/logo.png">
+  <link rel="apple-touch-icon" href="static/logo.png">
+
   <style>
     :root {
       --main-color: #d6610d;
@@ -23,9 +28,10 @@
       box-sizing: border-box;
     }
 
+    /* ロゴ */
     .logo {
-      width: 120px;
-      height: 120px;
+      width: 60px;   /* スマホ縦向き */
+      height: 60px;
       object-fit: contain;
       margin: 0 auto 2vh auto;
       display: block;
@@ -34,63 +40,101 @@
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
     }
 
+    /* 縦向き・横向き対応 */
+    @media (min-width: 600px) and (orientation: portrait) {
+      .logo { width: 100px; height: 100px; }
+      h1 { font-size: 1.8rem; }
+      video, canvas, #preview { max-width: 480px; }
+      button { padding: 12px 24px; font-size: 18px; }
+    }
+
+    @media (min-width: 600px) and (orientation: landscape) {
+      .logo { width: 90px; height: 90px; }
+      h1 { font-size: 1.7rem; }
+      video, canvas, #preview { max-width: 420px; }
+      button { padding: 12px 20px; font-size: 17px; }
+    }
+
+    @media (min-width: 992px) and (orientation: portrait) {
+      .logo { width: 140px; height: 140px; }
+      h1 { font-size: 2rem; }
+      video, canvas, #preview { max-width: 600px; }
+      button { padding: 14px 28px; font-size: 20px; }
+    }
+
+    @media (min-width: 992px) and (orientation: landscape) {
+      .logo { width: 120px; height: 120px; }
+      h1 { font-size: 1.9rem; }
+      video, canvas, #preview { max-width: 540px; }
+      button { padding: 14px 24px; font-size: 19px; }
+    }
+
+    /* タイトル */
     h1 {
       margin-bottom: 2vh;
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       text-align: center;
     }
 
-    video, canvas, img {
+    /* video, canvas, preview画像 */
+    video, canvas, #preview {
       width: 90%;
-      max-width: 480px;
+      max-width: 360px;
       border-radius: 15px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
       margin-bottom: 2vh;
       background-color: #000;
     }
 
+    /* ボタン */
     button {
       margin: 1vh;
-      padding: 12px 24px;
+      padding: 10px 20px;
       border: none;
       border-radius: 10px;
       background-color: white;
       color: var(--main-color);
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       transition: 0.2s;
+      cursor: pointer;
     }
 
     button:hover {
       background-color: #f5f5f5;
     }
 
-    #preview, #retake, #send {
-      display: none;
-    }
+    /* 非表示初期設定 */
+    #preview, #retake, #send { display: none; }
 
+    /* ボタン群 固定 */
     .controls {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 10px;
-      position: sticky;
+      position: fixed;  /* 画面下で固定 */
       bottom: 2vh;
       background: rgba(214, 97, 13, 0.9);
       padding: 10px;
       border-radius: 12px;
       box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 600px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
     }
   </style>
 </head>
 <body>
   <!-- ロゴ -->
-  <img src="static/logo.png">
+  <img src="static/logo.png" class="logo">
 
-  <!--　タイトル -->
+  <!-- タイトル -->
   <h1>📷 てがきぼ -TEGaKiBO-</h1>
 
-  <!--　カメラ映像・プレビュー -->
+  <!-- カメラ映像・プレビュー -->
   <video id="camera" autoplay playsinline></video>
   <canvas id="canvas" style="display:none;"></canvas>
   <img id="preview" alt="プレビュー画像" />
@@ -129,7 +173,7 @@
 
     startCamera();
 
-    //撮影
+    // 撮影
     captureBtn.addEventListener("click", () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -143,7 +187,7 @@
       sendBtn.style.display = "inline-block";
     });
 
-    //撮り直し
+    // 撮り直し
     retakeBtn.addEventListener("click", () => {
       preview.style.display = "none";
       video.style.display = "block";
@@ -152,7 +196,7 @@
       sendBtn.style.display = "none";
     });
 
-    //送信
+    // 送信
     sendBtn.addEventListener("click", () => {
       canvas.toBlob((blob) => {
         const formData = new FormData();
@@ -175,6 +219,3 @@
   </script>
 </body>
 </html>
-
-
-
