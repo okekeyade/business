@@ -1,19 +1,19 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
-import pytesseract
+from flask import Flask, render_template, jsonify, request, send_from_directory
+import pytesseract, os, io, re, json, shutil
 from PIL import Image, ImageFilter
-import base64, io, re, os, json, shutil
+import base64
 
 app = Flask(__name__)
-DATA_FILE = 'data.json'
 
-# --- Tesseract 自動検出 ---
+# ---------- 基本設定 ----------
+DATA_FILE = 'data.json'
 tesseract_cmd = shutil.which("tesseract")
 if tesseract_cmd is None:
-    raise RuntimeError("Tesseract が見つかりません。Render設定で tesseract-ocr を追加してください。")
+    raise RuntimeError("Tesseract が見つかりません")
 pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
 
-# --- データ読み書き ---
+# ---------- データ操作 ----------
 def load_data():
     if os.path.exists(DATA_FILE):
         return json.load(open(DATA_FILE, 'r', encoding='utf-8'))
@@ -24,50 +24,36 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-# --- ページルーティング ---
+# ---------- ページ ----------
 @app.route('/')
-def index():
-    return render_template('index.html')
+def home():
+    return render_template('home.html')
+
+@app.route('/kids')
+def kids_page():
+    return render_template('kids.html')
+
+@app.route('/adult')
+def adult_page():
+    return render_template('adult.html')
 
 @app.route('/list')
 def list_page():
     return render_template('list.html')
 
 
-# --- データAPI ---
+# ---------- API ----------
 @app.route('/data')
 def data_api():
     return jsonify(load_data())
 
 
-# --- 画像前処理 ---
-def preprocess_image(img):
-    img = img.convert('L')
-    img = img.filter(ImageFilter.MedianFilter())
-    basewidth = 1000
-    wpercent = (basewidth / float(img.size[0]))
-    hsize = int((float(img.size[1]) * float(wpercent)))
-    img = img.resize((basewidth, hsize), Image.ANTIALIAS)
-    threshold = 150
-    img = img.point(lambda x: 0 if x < threshold else 255)
-    return img
-
-
-# --- OCR処理（/ocr と /upload 両対応） ---
 @app.route('/ocr', methods=['POST'])
-@app.route('/upload', methods=['POST'])
 def ocr():
-    data = request.json.get('image') if request.is_json else None
-
-    # JSON形式でない場合（FormData）
-    if data is None and 'image' in request.files:
-        img = Image.open(request.files['image'].stream)
-    else:
-        img_data = re.sub('^data:image/.+;base64,', '', data)
-        img = Image.open(io.BytesIO(base64.b64decode(img_data)))
-
+    data = request.json['image']
+    img_data = re.sub('^data:image/.+;base64,', '', data)
+    img = Image.open(io.BytesIO(base64.b64decode(img_data)))
     img = preprocess_image(img)
-
     text = pytesseract.image_to_string(img, lang='jpn+eng', config='--psm 6 --oem 1')
 
     item, amount = "", ""
@@ -81,7 +67,6 @@ def ocr():
     return jsonify({"item": item, "amount": amount})
 
 
-# --- データ保存 ---
 @app.route('/save', methods=['POST'])
 def save():
     data = request.json
@@ -91,10 +76,19 @@ def save():
     return jsonify({"status": "ok"})
 
 
-# --- 静的ファイル (faviconなど) ---
+# ---------- 静的ファイル ----------
 @app.route('/static/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
+
+
+# ---------- 前処理 ----------
+def preprocess_image(img):
+    img = img.convert('L')
+    img = img.filter(ImageFilter.MedianFilter())
+    img = img.resize((1000, int(img.height * 1000 / img.width)))
+    img = img.point(lambda x: 0 if x < 150 else 255)
+    return img
 
 
 if __name__ == '__main__':
