@@ -1,1 +1,116 @@
-<!doctype HTML>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>👶 子供モード - てがきぼ</title>
+  <link rel="icon" href="/static/icon.png" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #ffd966, #ffb347);
+      color: #fff;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      margin: 10px 0 20px;
+    }
+    #camera {
+      width: 90%;
+      max-width: 400px;
+      border-radius: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin-bottom: 15px;
+    }
+    #result {
+      background-color: #fff;
+      color: #333;
+      width: 80%;
+      max-width: 350px;
+      border-radius: 15px;
+      padding: 15px;
+      margin-top: 10px;
+      font-size: 1.1rem;
+    }
+    .btn {
+      background-color: #fff;
+      color: #ff7f50;
+      font-weight: bold;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 20px;
+      margin: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.2s;
+    }
+    .btn:hover {
+      background-color: #ffe5cc;
+      transform: scale(1.05);
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>👶 おこづかいを よみとろう！</h1>
+  <video id="camera" autoplay playsinline></video><br>
+  <button class="btn" onclick="takePhoto()">📸 シャッター！</button>
+  <button class="btn" onclick="location.href='/list'">📖 きろくをみる</button>
+  <button class="btn" onclick="location.href='/'">🏠 ホームにもどる</button>
+  <div id="result">📷 カメラをかまえてね！</div>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('canvas');
+    const resultDiv = document.getElementById('result');
+
+    // カメラ起動
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(() => { resultDiv.textContent = "カメラが使えません🥲"; });
+
+    // 写真撮影とOCR送信
+    async function takePhoto() {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imgData = canvas.toDataURL('image/png');
+
+      resultDiv.textContent = "🔍 よみとり中...";
+
+      const res = await fetch('/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imgData })
+      });
+      const data = await res.json();
+
+      if (data.item && data.amount) {
+        resultDiv.textContent = `📘 「${data.item}」を ${data.amount}円 とよみとったよ！`;
+        // 保存
+        await fetch('/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: "支出", item: data.item, amount: data.amount })
+        });
+      } else {
+        resultDiv.textContent = "🤔 うまくよめなかったみたい…もういちど！";
+      }
+    }
+  </script>
+</body>
+</html>
