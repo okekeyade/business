@@ -3,8 +3,9 @@ services:
     name: tegakibo
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    buildCommand: >
+      apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-jpn && pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.14
+      - key: PYTHONUNBUFFERED
+        value: "1"
