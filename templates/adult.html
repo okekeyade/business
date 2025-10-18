@@ -1,1 +1,228 @@
-<!-- -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>てがきぼ -TEGaKiBO-</title>
+
+  <!-- favicon -->
+  <link rel="icon" type="image/png" href="static/logo.png">
+  <link rel="apple-touch-icon" href="static/logo.png">
+
+  <style>
+    :root {
+      --main-color: #d6610d;
+    }
+
+    body {
+      background-color: var(--main-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100dvh;
+      margin: 0;
+      padding: 4vh 0;
+      color: white;
+      font-family: "Segoe UI", sans-serif;
+      box-sizing: border-box;
+    }
+
+    /* ロゴ */
+    .logo {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      margin: 0 auto 2vh auto;
+      display: block;
+      border-radius: 50%;
+      background-color: white;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 縦向き・横向き対応 */
+    @media (min-width: 600px) and (orientation: portrait) {
+      .logo { width: 100px; height: 100px; }
+      h1 { font-size: 1.8rem; }
+      video, canvas, #preview { max-width: 480px; }
+      button { padding: 12px 24px; font-size: 18px; }
+    }
+
+    @media (min-width: 600px) and (orientation: landscape) {
+      .logo { width: 90px; height: 90px; }
+      h1 { font-size: 1.7rem; }
+      video, canvas, #preview { max-width: 420px; }
+      button { padding: 12px 20px; font-size: 17px; }
+    }
+
+    @media (min-width: 992px) and (orientation: portrait) {
+      .logo { width: 140px; height: 140px; }
+      h1 { font-size: 2rem; }
+      video, canvas, #preview { max-width: 600px; }
+      button { padding: 14px 28px; font-size: 20px; }
+    }
+
+    @media (min-width: 992px) and (orientation: landscape) {
+      .logo { width: 120px; height: 120px; }
+      h1 { font-size: 1.9rem; }
+      video, canvas, #preview { max-width: 540px; }
+      button { padding: 14px 24px; font-size: 19px; }
+    }
+
+    /* タイトル */
+    h1 {
+      margin-bottom: 2vh;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    /* video, canvas, preview画像 */
+    video, canvas, #preview {
+      width: 90%;
+      max-width: 360px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+      margin-bottom: 2vh;
+      background-color: #000;
+    }
+
+    /* ボタン */
+    button {
+      margin: 1vh;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background-color: white;
+      color: var(--main-color);
+      font-size: 16px;
+      font-weight: bold;
+      transition: 0.2s;
+      cursor: pointer;
+      outline: none; /* ← 追加: 囲みを消す */
+    }
+
+    button:hover {
+      background-color: #f5f5f5;
+    }
+
+    /* 非表示初期設定 */
+    #preview, #retake, #send { display: none; }
+
+    /* ボタン群 固定 */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      position: fixed;
+      bottom: 2vh;
+      background: rgba(214, 97, 13, 0.9);
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 600px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <!-- ロゴ -->
+  <img src="static/logo.png" class="logo">
+
+  <!-- タイトル -->
+  <h1>📷 てがきぼ -TEGaKiBO-</h1>
+
+  <!-- カメラ映像・プレビュー -->
+  <video id="camera" autoplay playsinline></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <img id="preview" alt="プレビュー画像" />
+
+  <!-- ページ移動ボタン -->
+  <div style="margin-bottom: 2vh;">
+    <button onclick="location.href='/list'">📊 収支を見る</button>
+  </div>
+
+
+  <!-- ボタン群 -->
+  <div class="controls">
+    <button id="capture">撮影</button>
+    <button id="retake">撮り直す</button>
+    <button id="send">送信</button>
+  </div>
+
+  <script>
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("canvas");
+    const preview = document.getElementById("preview");
+    const captureBtn = document.getElementById("capture");
+    const retakeBtn = document.getElementById("retake");
+    const sendBtn = document.getElementById("send");
+
+    let stream = null;
+
+    const constraints = {
+      audio: false,
+      video: { facingMode: { ideal: "environment" } },
+    };
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+      } catch (err) {
+        console.error("カメラアクセス失敗:", err);
+        alert("カメラの使用を許可してください。");
+      }
+    }
+
+    startCamera();
+
+    // 撮影
+    captureBtn.addEventListener("click", () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      preview.src = canvas.toDataURL("image/jpeg");
+
+      video.style.display = "none";
+      preview.style.display = "block";
+      captureBtn.style.display = "none";
+      retakeBtn.style.display = "inline-block";
+      sendBtn.style.display = "inline-block";
+    });
+
+    // 撮り直し
+    retakeBtn.addEventListener("click", () => {
+      preview.style.display = "none";
+      video.style.display = "block";
+      captureBtn.style.display = "inline-block";
+      retakeBtn.style.display = "none";
+      sendBtn.style.display = "none";
+    });
+
+    // 送信
+    sendBtn.addEventListener("click", () => {
+      canvas.toBlob((blob) => {
+        const formData = new FormData();
+        formData.append("image", blob, "capture.jpg");
+
+        fetch("/upload", {
+          method: "POST",
+          body: formData,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            alert("解析結果:\n項目: " + data.item + "\n値段: " + data.price);
+          })
+          .catch((err) => {
+            console.error(err);
+            alert("解析に失敗しました...私の技術力ではこれまでです...");
+          });
+      }, "image/jpeg");
+    });
+  </script>
+</body>
+</html>
