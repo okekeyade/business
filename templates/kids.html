@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>キッズモード</title>
+  <title>きっずもーど</title>
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
@@ -93,7 +93,7 @@
   </style>
 </head>
 <body>
-  <h1>📸 キッズモード</h1>
+  <h1>📸 きっずもーど</h1>
 
   <div id="camera-container">
     <video id="camera" autoplay playsinline></video>
@@ -101,20 +101,20 @@
   </div>
 
   <div class="button-group">
-    <button id="flip-btn">🔁 カメラ切替</button>
-    <button id="capture-btn">📷 撮影</button>
-    <button id="send-btn">📤 読み取る</button>
+    <button id="flip-btn">🔁 カメラをきりかえる</button>
+    <button id="capture-btn">📷 さつえい</button>
+    <button id="send-btn">📤 よみとり</button>
   </div>
 
   <div id="result"></div>
 
   <div class="item-box" id="item-box" style="display:none;">
-    <strong>🧾 読み取った内容:</strong><br>
-    品目：<span id="item-name"></span><br>
-    金額：<span id="item-price"></span> 円
+    <strong>🧾 よみとったないよう:</strong><br>
+    どんな：<span id="item-name"></span><br>
+    いくら：<span id="item-price"></span> えん
   </div>
 
-  <button id="home-btn" onclick="location.href='/'">🏠 ホームに戻る</button>
+  <button id="home-btn" onclick="location.href='/'">🏠 ホームにもどる</button>
 
   <script>
     let video = document.getElementById('camera');
@@ -146,7 +146,7 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      document.getElementById('result').innerText = "📷 撮れたよ！「読み取る」ボタンを押してね！";
+      document.getElementById('result').innerText = "📷 とれたよ！「よみとる」ボタンをおしてね！";
     };
 
     document.getElementById('send-btn').onclick = async () => {
