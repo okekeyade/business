@@ -21,8 +21,9 @@
     #camera-container {
       position: relative;
       margin: 20px auto;
-      width: 320px;
-      height: 240px;
+      width: 90%;
+      max-width: 360px;
+      height: 260px;
       border: 2px solid #555;
       border-radius: 8px;
       overflow: hidden;
@@ -39,17 +40,22 @@
       display: none;
     }
 
+    /* 🔽 ボタンを中央にまとめて表示 */
     .button-group {
       margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
     }
 
     button {
-      margin: 10px;
       padding: 10px 20px;
       font-size: 16px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
+      min-width: 120px;
     }
 
     #capture-btn {
@@ -73,12 +79,15 @@
       position: fixed;
       bottom: 20px;
       left: 20px;
+      padding: 10px 16px;
+      border-radius: 8px;
     }
 
     #result {
       margin-top: 20px;
       font-size: 16px;
       color: #333;
+      min-height: 24px;
     }
   </style>
 </head>
@@ -90,4 +99,68 @@
     <canvas id="canvas"></canvas>
   </div>
 
-  <div
+  <!-- ✅ ボタンが中央に並ぶ -->
+  <div class="button-group">
+    <button id="flip-btn">🔁 カメラ切替</button>
+    <button id="capture-btn">📸 撮影</button>
+    <button id="send-btn">📤 画像送信</button>
+  </div>
+
+  <div id="result"></div>
+
+  <button id="home-btn" onclick="location.href='/'">🏠 ホームに戻る</button>
+
+  <script>
+    let video = document.getElementById('camera');
+    let canvas = document.getElementById('canvas');
+    let currentStream;
+    let facingMode = "environment"; // 大人は背面からスタート
+
+    async function startCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode }
+        });
+        video.srcObject = currentStream;
+      } catch (err) {
+        alert("カメラにアクセスできません: " + err.message);
+      }
+    }
+
+    document.getElementById('flip-btn').onclick = async () => {
+      facingMode = (facingMode === "user") ? "environment" : "user";
+      await startCamera();
+    };
+
+    document.getElementById('capture-btn').onclick = () => {
+      let context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      document.getElementById('result').innerText = "📷 撮影完了。送信ボタンを押してください。";
+    };
+
+    document.getElementById('send-btn').onclick = async () => {
+      let imgData = canvas.toDataURL('image/png');
+      document.getElementById('result').innerText = "⏳ 画像を送信中...";
+      try {
+        const res = await fetch('/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imgData })
+        });
+        const result = await res.json();
+        document.getElementById('result').innerText =
+          `📊 認識結果：${result.item}（${result.amount}円）`;
+      } catch (err) {
+        document.getElementById('result').innerText = "⚠️ エラー: " + err.message;
+      }
+    };
+
+    startCamera();
+  </script>
+</body>
+</html>
