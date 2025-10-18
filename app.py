@@ -1,93 +1,100 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>子ども向けページ</title>
-<style>
-  body {
-    font-family: 'Arial';
-    background-color: #f0f8ff;
-    text-align: center;
-    margin: 0;
-    padding: 0;
-  }
-  video, canvas {
-    width: 90%;
-    max-width: 400px;
-    border-radius: 10px;
-    margin: 10px auto;
-  }
-  button {
-    display: block;
-    margin: 10px auto;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    background-color: #4CAF50;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-  }
-  #result {
-    margin-top: 15px;
-    font-size: 18px;
-    font-weight: bold;
-  }
-</style>
-</head>
-<body>
-  <h2>📸 カメラで文字を読み取ろう！</h2>
-  <video id="camera" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none;"></canvas>
+from flask import Flask, render_template, jsonify, request, send_from_directory
+import pytesseract, os, io, re, json, shutil
+from PIL import Image, ImageFilter
+import base64
 
-  <button id="flipBtn">🔄 カメラ切り替え</button>
-  <button id="captureBtn">📷 撮影する</button>
-  <button onclick="location.href='/'">🏠 ホームに戻る</button>
+app = Flask(__name__)
 
-  <p id="result"></p>
+# ---------- 基本設定 ----------
+DATA_FILE = 'data.json'
+tesseract_cmd = shutil.which("tesseract")
+if tesseract_cmd is None:
+    raise RuntimeError("Tesseract が見つかりません")
+pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
-<script>
-let useFront = false;
-let stream;
 
-async function startCamera() {
-  if (stream) stream.getTracks().forEach(track => track.stop());
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: useFront ? "user" : "environment" }
-    });
-    document.getElementById('camera').srcObject = stream;
-  } catch (err) {
-    alert("カメラが利用できません: " + err.message);
-  }
-}
+# ---------- データ操作 ----------
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return json.load(open(DATA_FILE, 'r', encoding='utf-8'))
+    return {"収入": [], "支出": []}
 
-document.getElementById('flipBtn').onclick = () => {
-  useFront = !useFront;
-  startCamera();
-};
+def save_data(data):
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-document.getElementById('captureBtn').onclick = async () => {
-  const video = document.getElementById('camera');
-  const canvas = document.getElementById('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  const imageData = canvas.toDataURL('image/png');
 
-  document.getElementById('result').innerText = "🔍 認識中...";
-  const res = await fetch("/ocr", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image: imageData })
-  });
-  const data = await res.json();
-  document.getElementById('result').innerText = 
-    `📘 品目: ${data.item || "なし"} / 💰 金額: ${data.amount || "なし"}`;
-};
+# ---------- ページ ----------
+@app.route('/')
+def home():
+    return render_template('home.html')
 
-startCamera();
-</script>
-</body>
-</html>
+@app.route('/kids')
+def kids_page():
+    return render_template('kids.html')
+
+@app.route('/adult')
+def adult_page():
+    return render_template('adult.html')
+
+@app.route('/list')
+def list_page():
+    return render_template('list.html')
+
+
+# ---------- API ----------
+@app.route('/data')
+def data_api():
+    return jsonify(load_data())
+
+
+@app.route('/ocr', methods=['POST'])
+def ocr():
+    data = request.json['image']
+    img_data = re.sub('^data:image/.+;base64,', '', data)
+    img = Image.open(io.BytesIO(base64.b64decode(img_data)))
+    img = preprocess_image(img)
+    text = pytesseract.image_to_string(img, lang='jpn+eng', config='--psm 6 --oem 1')
+
+    item, amount = "", ""
+    for ln in text.splitlines():
+        if ln.strip():
+            m = re.search(r'(\D+)\s*(\d+)', ln)
+            if m:
+                item, amount = m.group(1).strip(), m.group(2)
+                break
+
+    return jsonify({"item": item, "amount": amount})
+
+
+@app.route('/save', methods=['POST'])
+def save():
+    data = request.json
+    all_data = load_data()
+    all_data[data['type']].append({"item": data['item'], "amount": data['amount']})
+    save_data(all_data)
+    return jsonify({"status": "ok"})
+
+
+# ---------- 静的ファイル ----------
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
+
+
+# ---------- 前処理 ----------
+def preprocess_image(img):
+    img = img.convert('L')
+    img = img.filter(ImageFilter.MedianFilter())
+    basewidth = 1000
+    wpercent = basewidth / float(img.size[0])
+    hsize = int((float(img.size[1]) * float(wpercent)))
+    img = img.resize((basewidth, hsize), Image.Resampling.LANCZOS)  # ← 修正済み
+    img = img.point(lambda x: 0 if x < 150 else 255)
+    return img
+
+
+# ---------- メイン ----------
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
