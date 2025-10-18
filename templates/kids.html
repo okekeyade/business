@@ -6,30 +6,32 @@
   <title>キッズモード</title>
   <style>
     body {
-      font-family: "Comic Sans MS", sans-serif;
-      background: #fef4d9;
+      font-family: "Noto Sans JP", sans-serif;
+      background-color: #ffcc80;
       text-align: center;
       margin: 0;
       padding: 0;
     }
 
     h1 {
-      color: #ff7b00;
+      color: #5d4037;
       margin-top: 20px;
+      font-size: 1.8rem;
     }
 
     #camera-container {
       position: relative;
       margin: 20px auto;
-      width: 320px;
-      height: 240px;
-      border: 4px solid #ffa500;
-      border-radius: 16px;
+      width: 90%;
+      max-width: 360px;
+      height: 280px;
+      border: 3px solid #5d4037;
+      border-radius: 12px;
       overflow: hidden;
       background: #fff;
     }
 
-    #camera {
+    video {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -39,51 +41,60 @@
       display: none;
     }
 
+    /* ボタン */
     .button-group {
       margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
     }
 
     button {
-      margin: 10px;
-      padding: 10px 20px;
+      padding: 14px 22px;
       font-size: 18px;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
-    }
-
-    #capture-btn {
-      background: #ffb703;
-      color: white;
+      min-width: 130px;
+      transition: 0.2s;
     }
 
     #flip-btn {
-      background: #219ebc;
+      background-color: #ffb300;
+      color: white;
+    }
+
+    #capture-btn {
+      background-color: #f57c00;
       color: white;
     }
 
     #send-btn {
-      background: #8ecae6;
-      color: black;
+      background-color: #43a047;
+      color: white;
     }
 
     #home-btn {
-      background: #fb8500;
+      background: #6d4c41;
       color: white;
       position: fixed;
       bottom: 20px;
       left: 20px;
+      padding: 10px 16px;
+      border-radius: 8px;
     }
 
     #result {
       margin-top: 20px;
       font-size: 18px;
-      color: #333;
+      color: #4e342e;
+      min-height: 28px;
     }
   </style>
 </head>
 <body>
-  <h1>📷 キッズモード</h1>
+  <h1>📸 キッズモード</h1>
 
   <div id="camera-container">
     <video id="camera" autoplay playsinline></video>
@@ -92,7 +103,7 @@
 
   <div class="button-group">
     <button id="flip-btn">🔁 カメラ切替</button>
-    <button id="capture-btn">📸 撮影</button>
+    <button id="capture-btn">📷 撮影</button>
     <button id="send-btn">📤 画像送信</button>
   </div>
 
@@ -104,7 +115,54 @@
     let video = document.getElementById('camera');
     let canvas = document.getElementById('canvas');
     let currentStream;
-    let facingMode = "user"; // 初期カメラ（イン）
+    let facingMode = "user"; // 👧 キッズモードは前面カメラから
 
     async function startCamera() {
-      i
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode }
+        });
+        video.srcObject = currentStream;
+      } catch (err) {
+        console.error(err);
+        alert("カメラを使用できません。\n設定からカメラの許可を確認してください。");
+      }
+    }
+
+    document.getElementById('flip-btn').onclick = async () => {
+      facingMode = (facingMode === "user") ? "environment" : "user";
+      await startCamera();
+    };
+
+    document.getElementById('capture-btn').onclick = () => {
+      let context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      document.getElementById('result').innerText = "📷 撮れたよ！送信してね！";
+    };
+
+    document.getElementById('send-btn').onclick = async () => {
+      let imgData = canvas.toDataURL('image/png');
+      document.getElementById('result').innerText = "⏳ 読み取り中...";
+      try {
+        const res = await fetch('/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imgData })
+        });
+        const result = await res.json();
+        document.getElementById('result').innerText =
+          `📊 よんだよ！「${result.item}」で「${result.amount}円」って書いてあったよ！`;
+      } catch (err) {
+        document.getElementById('result').innerText = "⚠️ ごめんね、読めなかったみたい…";
+      }
+    };
+
+    startCamera();
+  </script>
+</body>
+</html>
