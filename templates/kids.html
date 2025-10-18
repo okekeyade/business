@@ -41,7 +41,6 @@
       display: none;
     }
 
-    /* ボタン */
     .button-group {
       margin-top: 20px;
       display: flex;
@@ -60,20 +59,9 @@
       transition: 0.2s;
     }
 
-    #flip-btn {
-      background-color: #ffb300;
-      color: white;
-    }
-
-    #capture-btn {
-      background-color: #f57c00;
-      color: white;
-    }
-
-    #send-btn {
-      background-color: #43a047;
-      color: white;
-    }
+    #flip-btn { background-color: #ffb300; color: white; }
+    #capture-btn { background-color: #f57c00; color: white; }
+    #send-btn { background-color: #43a047; color: white; }
 
     #home-btn {
       background: #6d4c41;
@@ -89,7 +77,18 @@
       margin-top: 20px;
       font-size: 18px;
       color: #4e342e;
-      min-height: 28px;
+      min-height: 40px;
+    }
+
+    .item-box {
+      background: #fff3e0;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 15px auto;
+      width: 85%;
+      max-width: 360px;
+      text-align: left;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -104,10 +103,16 @@
   <div class="button-group">
     <button id="flip-btn">🔁 カメラ切替</button>
     <button id="capture-btn">📷 撮影</button>
-    <button id="send-btn">📤 画像送信</button>
+    <button id="send-btn">📤 読み取る</button>
   </div>
 
   <div id="result"></div>
+
+  <div class="item-box" id="item-box" style="display:none;">
+    <strong>🧾 読み取った内容:</strong><br>
+    品目：<span id="item-name"></span><br>
+    金額：<span id="item-price"></span> 円
+  </div>
 
   <button id="home-btn" onclick="location.href='/'">🏠 ホームに戻る</button>
 
@@ -115,7 +120,7 @@
     let video = document.getElementById('camera');
     let canvas = document.getElementById('canvas');
     let currentStream;
-    let facingMode = "user"; // 👧 キッズモードは前面カメラから
+    let facingMode = "user";
 
     async function startCamera() {
       if (currentStream) {
@@ -127,8 +132,7 @@
         });
         video.srcObject = currentStream;
       } catch (err) {
-        console.error(err);
-        alert("カメラを使用できません。\n設定からカメラの許可を確認してください。");
+        alert("カメラが使えません: " + err.message);
       }
     }
 
@@ -138,28 +142,26 @@
     };
 
     document.getElementById('capture-btn').onclick = () => {
-      let context = canvas.getContext('2d');
+      let ctx = canvas.getContext('2d');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      document.getElementById('result').innerText = "📷 撮れたよ！送信してね！";
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      document.getElementById('result').innerText = "📷 撮れたよ！「読み取る」ボタンを押してね！";
     };
 
     document.getElementById('send-btn').onclick = async () => {
       let imgData = canvas.toDataURL('image/png');
-      document.getElementById('result').innerText = "⏳ 読み取り中...";
-      try {
-        const res = await fetch('/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imgData })
-        });
-        const result = await res.json();
-        document.getElementById('result').innerText =
-          `📊 よんだよ！「${result.item}」で「${result.amount}円」って書いてあったよ！`;
-      } catch (err) {
-        document.getElementById('result').innerText = "⚠️ ごめんね、読めなかったみたい…";
-      }
+      document.getElementById('result').innerText = "⏳ よみとりちゅう...";
+      const res = await fetch('/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imgData })
+      });
+      const data = await res.json();
+      document.getElementById('item-box').style.display = 'block';
+      document.getElementById('item-name').innerText = data.item || "（なし）";
+      document.getElementById('item-price').innerText = data.amount || "（なし）";
+      document.getElementById('result').innerText = "✅ よめたよ！";
     };
 
     startCamera();
