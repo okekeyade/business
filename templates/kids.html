@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>きっずもーど</title>
+  <title>キッズモード</title>
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
@@ -31,15 +31,18 @@
       background: #fff;
     }
 
-    video {
+    video, #preview {
       width: 100%;
       height: 100%;
       object-fit: cover;
-    }
-
-    canvas {
       display: none;
     }
+
+    #preview {
+      border-radius: 12px;
+    }
+
+    canvas { display: none; }
 
     .button-group {
       margin-top: 20px;
@@ -62,6 +65,7 @@
     #flip-btn { background-color: #ffb300; color: white; }
     #capture-btn { background-color: #f57c00; color: white; }
     #send-btn { background-color: #43a047; color: white; }
+    #retake-btn { background-color: #8d6e63; color: white; }
 
     #home-btn {
       background: #6d4c41;
@@ -89,28 +93,31 @@
       max-width: 360px;
       text-align: left;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h1>📸 きっずもーど</h1>
+  <h1>📸 キッズモード</h1>
 
   <div id="camera-container">
     <video id="camera" autoplay playsinline></video>
+    <img id="preview" alt="さつえいしたしゃしん">
     <canvas id="canvas"></canvas>
   </div>
 
   <div class="button-group">
-    <button id="flip-btn">🔁 カメラをきりかえる</button>
+    <button id="flip-btn">🔁 カメラきりかえ</button>
     <button id="capture-btn">📷 さつえい</button>
-    <button id="send-btn">📤 よみとり</button>
+    <button id="retake-btn" style="display:none;">🔄 やりなす</button>
+    <button id="send-btn">📤 よみとる</button>
   </div>
 
   <div id="result"></div>
 
-  <div class="item-box" id="item-box" style="display:none;">
+  <div class="item-box" id="item-box">
     <strong>🧾 よみとったないよう:</strong><br>
-    どんな：<span id="item-name"></span><br>
+    なにが/なにを：<span id="item-name"></span><br>
     いくら：<span id="item-price"></span> えん
   </div>
 
@@ -118,21 +125,20 @@
 
   <script>
     let video = document.getElementById('camera');
+    let preview = document.getElementById('preview');
     let canvas = document.getElementById('canvas');
     let currentStream;
     let facingMode = "user";
 
     async function startCamera() {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
       try {
-        currentStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingMode }
-        });
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
         video.srcObject = currentStream;
+        video.style.display = "block";
+        preview.style.display = "none";
       } catch (err) {
-        alert("カメラが使えません: " + err.message);
+        alert("カメラがつかえません: " + err.message);
       }
     }
 
@@ -146,11 +152,23 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      document.getElementById('result').innerText = "📷 とれたよ！「よみとる」ボタンをおしてね！";
+      preview.src = canvas.toDataURL('image/png');
+      preview.style.display = "block";
+      video.style.display = "none";
+      document.getElementById('retake-btn').style.display = "inline-block";
+      document.getElementById('result').innerText = "📸 とれたよ！";
+    };
+
+    document.getElementById('retake-btn').onclick = () => {
+      startCamera();
+      document.getElementById('retake-btn').style.display = "none";
+      document.getElementById('item-box').style.display = "none";
+      document.getElementById('result').innerText = "";
     };
 
     document.getElementById('send-btn').onclick = async () => {
-      let imgData = canvas.toDataURL('image/png');
+      let imgData = preview.src;
+      if (!imgData) return alert("しゃしんをとってね！");
       document.getElementById('result').innerText = "⏳ よみとりちゅう...";
       const res = await fetch('/ocr', {
         method: 'POST',
