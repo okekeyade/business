@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
-      background: #f0f0f0;
+      background-color: #f5f5f5;
       text-align: center;
       margin: 0;
       padding: 0;
@@ -30,7 +30,7 @@
       background: #fff;
     }
 
-    #camera {
+    video {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -40,7 +40,6 @@
       display: none;
     }
 
-    /* 🔽 ボタンを中央にまとめて表示 */
     .button-group {
       margin-top: 20px;
       display: flex;
@@ -58,20 +57,9 @@
       min-width: 120px;
     }
 
-    #capture-btn {
-      background: #1976d2;
-      color: white;
-    }
-
-    #flip-btn {
-      background: #555;
-      color: white;
-    }
-
-    #send-btn {
-      background: #4caf50;
-      color: white;
-    }
+    #flip-btn { background: #555; color: white; }
+    #capture-btn { background: #1976d2; color: white; }
+    #send-btn { background: #4caf50; color: white; }
 
     #home-btn {
       background: #9e9e9e;
@@ -87,7 +75,18 @@
       margin-top: 20px;
       font-size: 16px;
       color: #333;
-      min-height: 24px;
+      min-height: 28px;
+    }
+
+    .item-box {
+      background: #eeeeee;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 15px auto;
+      width: 85%;
+      max-width: 360px;
+      text-align: left;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -99,14 +98,19 @@
     <canvas id="canvas"></canvas>
   </div>
 
-  <!-- ✅ ボタンが中央に並ぶ -->
   <div class="button-group">
     <button id="flip-btn">🔁 カメラ切替</button>
     <button id="capture-btn">📸 撮影</button>
-    <button id="send-btn">📤 画像送信</button>
+    <button id="send-btn">📤 認識</button>
   </div>
 
   <div id="result"></div>
+
+  <div class="item-box" id="item-box" style="display:none;">
+    <strong>📋 認識結果:</strong><br>
+    品目：<span id="item-name"></span><br>
+    金額：<span id="item-price"></span> 円
+  </div>
 
   <button id="home-btn" onclick="location.href='/'">🏠 ホームに戻る</button>
 
@@ -114,19 +118,15 @@
     let video = document.getElementById('camera');
     let canvas = document.getElementById('canvas');
     let currentStream;
-    let facingMode = "environment"; // 大人は背面からスタート
+    let facingMode = "environment";
 
     async function startCamera() {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
+      if (currentStream) currentStream.getTracks().forEach(t => t.stop());
       try {
-        currentStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingMode }
-        });
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
         video.srcObject = currentStream;
       } catch (err) {
-        alert("カメラにアクセスできません: " + err.message);
+        alert("カメラエラー: " + err.message);
       }
     }
 
@@ -136,28 +136,26 @@
     };
 
     document.getElementById('capture-btn').onclick = () => {
-      let context = canvas.getContext('2d');
+      let ctx = canvas.getContext('2d');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      document.getElementById('result').innerText = "📷 撮影完了。送信ボタンを押してください。";
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      document.getElementById('result').innerText = "📷 撮影完了 → 認識ボタンを押してください。";
     };
 
     document.getElementById('send-btn').onclick = async () => {
       let imgData = canvas.toDataURL('image/png');
-      document.getElementById('result').innerText = "⏳ 画像を送信中...";
-      try {
-        const res = await fetch('/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imgData })
-        });
-        const result = await res.json();
-        document.getElementById('result').innerText =
-          `📊 認識結果：${result.item}（${result.amount}円）`;
-      } catch (err) {
-        document.getElementById('result').innerText = "⚠️ エラー: " + err.message;
-      }
+      document.getElementById('result').innerText = "⏳ 認識中...";
+      const res = await fetch('/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imgData })
+      });
+      const data = await res.json();
+      document.getElementById('item-box').style.display = 'block';
+      document.getElementById('item-name').innerText = data.item || "（なし）";
+      document.getElementById('item-price').innerText = data.amount || "（なし）";
+      document.getElementById('result').innerText = "✅ 認識が完了しました。";
     };
 
     startCamera();
